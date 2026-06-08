@@ -1,0 +1,12 @@
+{
+  "name": "chinatrade-project",
+  "version": "1.0.0",
+  "description": "Azure Function project",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0"
+  },
+  "main": "index.js"
+}
