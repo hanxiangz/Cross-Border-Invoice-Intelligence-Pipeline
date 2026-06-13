@@ -5,3 +5,4 @@ app.setup({
 });
 
 require('./functions/httpTrigger1');
+require('./functions/ProcessBlobUpload');
