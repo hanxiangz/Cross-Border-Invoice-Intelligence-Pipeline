@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Invoice Intelligence | China-Australia Trade</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { margin: 0 0 8px 0; color: #1a1a2e; }
+        .subtitle { color: #666; margin-bottom: 32px; }
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 16px;
+            padding: 48px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            background: #eef2ff;
+            border-color: #764ba2;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 24px 0;
+            padding: 16px;
+            background: #f0f0f0;
+            border-radius: 12px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #result {
+            display: none;
+            margin-top: 24px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 16px;
+        }
+        pre {
+            background: #1e1e2e;
+            color: #50fa7b;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 16px;
+        }
+        button:hover { background: #5a67d8; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📄 Cross-Border Invoice Intelligence</h1>
+    <div class="subtitle">China → Australia Trade Document Processor</div>
+    
+    <div class="upload-area" id="uploadArea">
+        📁 Drag & drop your invoice here<br>
+        <small style="color:#888">(JPG, PNG, PDF accepted)</small>
+    </div>
+    
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Sending to Azure AI Vision for OCR...</p>
+    </div>
+    
+    <div id="result">
+        <span class="badge">✅ Extraction Complete</span>
+        <h3>📊 Extracted Data</h3>
+        <pre id="output">Waiting for results...</pre>
+        <button onclick="resetForm()">Upload Another</button>
+    </div>
+</div>
+
+<script>
+    const uploadArea = document.getElementById('uploadArea');
+    const loadingDiv = document.getElementById('loading');
+    const resultDiv = document.getElementById('result');
+    const outputPre = document.getElementById('output');
+    
+    // IMPORTANT: Replace this with YOUR Azure Function URL after deployment
+    const API_URL = 'https://YOUR-FUNCTION-APP.azurewebsites.net/api/ProcessBlobUpload';
+    
+    uploadArea.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png,application/pdf';
+        input.onchange = (e) => uploadFile(e.target.files[0]);
+        input.click();
+    });
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) uploadFile(file);
+    });
+    
+    async function uploadFile(file) {
+        loadingDiv.style.display = 'block';
+        resultDiv.style.display = 'none';
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            outputPre.textContent = JSON.stringify(data, null, 2);
+            resultDiv.style.display = 'block';
+        } catch (error) {
+            outputPre.textContent = `Error: ${error.message}\n\nMake sure your Azure Function is deployed and CORS is enabled.`;
+            resultDiv.style.display = 'block';
+        } finally {
+            loadingDiv.style.display = 'none';
+        }
+    }
+    
+    function resetForm() {
+        resultDiv.style.display = 'none';
+        outputPre.textContent = 'Waiting for results...';
+    }
+</script>
+</body>
+</html>
