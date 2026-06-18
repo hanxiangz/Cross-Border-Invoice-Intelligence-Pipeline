@@ -17,6 +17,7 @@ app.http('UploadInvoice', {
             context.log('ERROR: Azure storage connection string not configured');
             return {
                 status: 500,
+                headers: { 'Content-Type': 'application/json' },
                 body: { error: 'Azure storage connection string is not configured.' }
             };
         }
@@ -38,6 +39,7 @@ app.http('UploadInvoice', {
             context.log(`ERROR parsing JSON: ${error.message}`);
             return {
                 status: 400,
+                headers: { 'Content-Type': 'application/json' },
                 body: { 
                     error: 'Invalid JSON payload. Please ensure content-type is application/json.',
                     details: error.message
@@ -51,6 +53,7 @@ app.http('UploadInvoice', {
             context.log(`body: ${JSON.stringify(body)}`);
             return {
                 status: 400,
+                headers: { 'Content-Type': 'application/json' },
                 body: { 
                     error: 'Request must include fileName and base64 content.',
                     received: {
@@ -78,6 +81,7 @@ app.http('UploadInvoice', {
         context.log('TEST MODE: Returning payload without uploading');
         return {
             status: 200,
+            headers: { 'Content-Type': 'application/json' },
             body: {
                 success: true,
                 testMode: true,
@@ -118,6 +122,7 @@ app.http('UploadInvoice', {
 
             return {
                 status: 200,
+                headers: { 'Content-Type': 'application/json' },
                 body: {
                     success: true,
                     blobName,
@@ -130,6 +135,7 @@ app.http('UploadInvoice', {
             context.log(`Error details: ${JSON.stringify(error)}`);
             return {
                 status: 500,
+                headers: { 'Content-Type': 'application/json' },
                 body: { 
                     error: error.message,
                     details: error.stack || 'No stack trace available'
@@ -137,4 +143,4 @@ app.http('UploadInvoice', {
             };
         }
     }
-});
+});is
