@@ -120,8 +120,8 @@
     const resultDiv = document.getElementById('result');
     const outputPre = document.getElementById('output');
     
-    // IMPORTANT: Replace this with YOUR Azure Function URL after deployment
-    const API_URL = 'chinatradeapp-g0hxhgcvh3ebf8et.australiasoutheast-01.azurewebsites.net';
+    // Use the upload HTTP function on the same origin
+    const API_URL = '/api/UploadInvoice';
     
     uploadArea.addEventListener('click', () => {
         const input = document.createElement('input');
@@ -150,25 +150,36 @@
     async function uploadFile(file) {
         loadingDiv.style.display = 'block';
         resultDiv.style.display = 'none';
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            outputPre.textContent = JSON.stringify(data, null, 2);
-            resultDiv.style.display = 'block';
-        } catch (error) {
-            outputPre.textContent = `Error: ${error.message}\n\nMake sure your Azure Function is deployed and CORS is enabled.`;
-            resultDiv.style.display = 'block';
-        } finally {
-            loadingDiv.style.display = 'none';
-        }
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+            const base64 = reader.result.split(',')[1];
+            const payload = {
+                fileName: file.name,
+                contentType: file.type || 'application/octet-stream',
+                content: base64
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                outputPre.textContent = JSON.stringify(data, null, 2);
+                resultDiv.style.display = 'block';
+            } catch (error) {
+                outputPre.textContent = `Error: ${error.message}\n\nMake sure your Azure Function is deployed and CORS is enabled.`;
+                resultDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        };
+        reader.readAsDataURL(file);
     }
     
     function resetForm() {
