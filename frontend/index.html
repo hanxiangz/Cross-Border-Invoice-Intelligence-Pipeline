@@ -120,8 +120,11 @@
     const resultDiv = document.getElementById('result');
     const outputPre = document.getElementById('output');
     
-    // Use the upload HTTP function on the same origin
-    const API_URL = '/api/UploadInvoice';
+    // Local testing (Live Server)
+    //const API_URL = 'http://localhost:7071/api/UploadInvoice';
+
+    // Production (Azure Static Web Apps)
+    const API_URL = 'https://chinatradeapp-g0hxhgcvh3ebf8et.australiasoutheast-01.azurewebsites.net/api/UploadInvoice';
     
     uploadArea.addEventListener('click', () => {
         const input = document.createElement('input');
