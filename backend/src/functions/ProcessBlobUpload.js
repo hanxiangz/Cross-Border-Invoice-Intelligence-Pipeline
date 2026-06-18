@@ -1,6 +1,7 @@
 const { app } = require('@azure/functions');
 const { ComputerVisionClient } = require('@azure/cognitiveservices-computervision');
 const { ApiKeyCredentials } = require('@azure/ms-rest-js');
+const { Readable } = require('stream');
 
 // Get credentials from environment variables
 const key = process.env.AI_VISION_KEY;
@@ -24,9 +25,12 @@ app.storageBlob('ProcessBlobUpload', {
             const credentials = new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': key } });
             const client = new ComputerVisionClient(credentials, endpoint);
             
-            // Call OCR on the image using the raw blob buffer
+            // ✅ FIX: Convert Buffer to Readable Stream
+            const stream = Readable.from(blob);
+            
+            // Call OCR on the image using the stream
             context.log('Calling Azure AI Vision OCR...');
-            const result = await client.recognizePrintedTextInStream(true, blob);
+            const result = await client.recognizePrintedTextInStream(true, stream);
             
             // Extract all text from the result
             let extractedText = '';
@@ -53,6 +57,7 @@ app.storageBlob('ProcessBlobUpload', {
             
         } catch (error) {
             context.log(`ERROR processing image: ${error.message}`);
+            context.log(`Error stack: ${error.stack}`);
         }
         
         context.log(`Finished processing: ${fileName}`);
