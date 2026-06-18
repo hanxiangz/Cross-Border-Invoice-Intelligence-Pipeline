@@ -18,7 +18,7 @@ app.http('UploadInvoice', {
             return {
                 status: 500,
                 headers: { 'Content-Type': 'application/json' },
-                body: { error: 'Azure storage connection string is not configured.' }
+                body: JSON.stringify({ error: 'Azure storage connection string is not configured.' })
             };
         }
 
@@ -40,10 +40,10 @@ app.http('UploadInvoice', {
             return {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' },
-                body: { 
+                body: JSON.stringify({ 
                     error: 'Invalid JSON payload. Please ensure content-type is application/json.',
                     details: error.message
-                }
+                })
             };
         }
 
@@ -54,13 +54,13 @@ app.http('UploadInvoice', {
             return {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' },
-                body: { 
+                body: JSON.stringify({ 
                     error: 'Request must include fileName and base64 content.',
                     received: {
                         hasFileName: !!body?.fileName,
                         hasContent: !!body?.content
                     }
-                }
+                })
             };
         }
 
@@ -123,12 +123,12 @@ app.http('UploadInvoice', {
             return {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
-                body: {
+                body: JSON.stringify({
                     success: true,
                     blobName,
                     url: blockBlobClient.url,
                     fileSize: buffer.length
-                }
+                }) 
             };
         } catch (error) {
             context.log(`❌ ERROR uploading file: ${error.message}`);
@@ -136,11 +136,11 @@ app.http('UploadInvoice', {
             return {
                 status: 500,
                 headers: { 'Content-Type': 'application/json' },
-                body: { 
+                body: JSON.stringify({ 
                     error: error.message,
                     details: error.stack || 'No stack trace available'
-                }
+                })
             };
         }
     }
-});is
+});
