@@ -115,17 +115,26 @@
 </div>
 
 <script>
+    // ============================================================
+    // 1. DOM REFERENCES
+    // ============================================================
     const uploadArea = document.getElementById('uploadArea');
     const loadingDiv = document.getElementById('loading');
     const resultDiv = document.getElementById('result');
     const outputPre = document.getElementById('output');
     
-    // Local testing (Live Server)
-    //const API_URL = 'http://localhost:7071/api/UploadInvoice';
+    // ============================================================
+    // 2. API URL CONFIGURATION
+    // ============================================================
+    // Local testing (Live Server) - uncomment for local testing
+    // const API_URL = 'http://localhost:7071/api/UploadInvoice';
 
     // Production (Azure Static Web Apps)
     const API_URL = 'https://chinatradeapp-g0hxhgcvh3ebf8et.australiasoutheast-01.azurewebsites.net/api/UploadInvoice';
     
+    // ============================================================
+    // 3. CLICK UPLOAD HANDLER
+    // ============================================================
     uploadArea.addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -134,6 +143,9 @@
         input.click();
     });
     
+    // ============================================================
+    // 4. DRAG AND DROP HANDLERS
+    // ============================================================
     uploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
         uploadArea.classList.add('dragover');
@@ -150,12 +162,17 @@
         if (file) uploadFile(file);
     });
     
+    // ============================================================
+    // 5. MAIN UPLOAD FUNCTION (UPDATED)
+    // ============================================================
     async function uploadFile(file) {
+        // Show loading spinner, hide previous results
         loadingDiv.style.display = 'block';
         resultDiv.style.display = 'none';
 
         const reader = new FileReader();
         reader.onload = async () => {
+            // Extract Base64 content (remove the data:image/...;base64, prefix)
             const base64 = reader.result.split(',')[1];
             const payload = {
                 fileName: file.name,
@@ -164,6 +181,7 @@
             };
 
             try {
+                // Send the file to the Azure Function
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -172,19 +190,36 @@
                     body: JSON.stringify(payload)
                 });
 
-                const data = await response.json();
-                outputPre.textContent = JSON.stringify(data, null, 2);
+                // --- UPDATED: Better JSON handling ---
+                // Check if the response is JSON
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    // Parse and display the JSON response
+                    const data = await response.json();
+                    outputPre.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    // If not JSON, show the raw text (helps with debugging)
+                    const text = await response.text();
+                    outputPre.textContent = `⚠️ Response is not JSON:\n${text}`;
+                }
                 resultDiv.style.display = 'block';
+
             } catch (error) {
-                outputPre.textContent = `Error: ${error.message}\n\nMake sure your Azure Function is deployed and CORS is enabled.`;
+                // Display any fetch or parsing errors
+                outputPre.textContent = `❌ Error: ${error.message}\n\nMake sure your Azure Function is deployed and CORS is enabled.`;
                 resultDiv.style.display = 'block';
             } finally {
+                // Hide the loading spinner regardless of success or failure
                 loadingDiv.style.display = 'none';
             }
         };
+        // Start reading the file as a Data URL (Base64)
         reader.readAsDataURL(file);
     }
     
+    // ============================================================
+    // 6. RESET FORM FUNCTION
+    // ============================================================
     function resetForm() {
         resultDiv.style.display = 'none';
         outputPre.textContent = 'Waiting for results...';
