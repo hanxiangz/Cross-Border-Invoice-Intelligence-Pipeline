@@ -61,14 +61,6 @@
             background: #f8f9fa;
             border-radius: 16px;
         }
-        pre {
-            background: #1e1e2e;
-            color: #50fa7b;
-            padding: 16px;
-            border-radius: 12px;
-            overflow-x: auto;
-            font-size: 12px;
-        }
         .badge {
             display: inline-block;
             background: #28a745;
@@ -77,6 +69,41 @@
             border-radius: 20px;
             font-size: 12px;
             margin-bottom: 16px;
+        }
+        .field-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .field {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+        .field-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .field-value {
+            font-size: 16px;
+            color: #1a1a2e;
+            font-weight: 600;
+            margin-top: 4px;
+            word-break: break-word;
+        }
+        .field-value.empty { color: #ccc; font-weight: 400; font-style: italic; }
+        pre {
+            background: #1e1e2e;
+            color: #50fa7b;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin-top: 16px;
         }
         button {
             background: #667eea;
@@ -89,90 +116,125 @@
             margin-top: 16px;
         }
         button:hover { background: #5a67d8; }
+        .collapsible-toggle {
+            background: none;
+            color: #667eea;
+            border: none;
+            padding: 0;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 8px;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>📄 Cross-Border Invoice Intelligence</h1>
     <div class="subtitle">China → Australia Trade Document Processor</div>
-    
+
     <div class="upload-area" id="uploadArea">
         📁 Drag & drop your invoice here<br>
         <small style="color:#888">(JPG, PNG, PDF accepted)</small>
     </div>
-    
+
     <div id="loading">
         <div class="spinner"></div>
-        <p>Sending to Azure AI Vision for OCR...</p>
+        <p id="loadingText">Sending to Azure AI Vision for OCR...</p>
     </div>
-    
+
     <div id="result">
         <span class="badge">✅ Extraction Complete</span>
         <h3>📊 Extracted Data</h3>
-        <pre id="output">Waiting for results...</pre>
+
+        <div class="field-grid">
+            <div class="field">
+                <div class="field-label">Invoice Number</div>
+                <div class="field-value empty" id="invoiceNumber">—</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Amount</div>
+                <div class="field-value empty" id="amount">—</div>
+            </div>
+            <div class="field">
+                <div class="field-label">File Name</div>
+                <div class="field-value empty" id="fileName">—</div>
+            </div>
+            <div class="field">
+                <div class="field-label">Processed At</div>
+                <div class="field-value empty" id="processedAt">—</div>
+            </div>
+        </div>
+
+        <button class="collapsible-toggle" onclick="toggleRawText()">Show raw OCR text</button>
+        <pre id="rawText" style="display:none;"></pre>
+
         <button onclick="resetForm()">Upload Another</button>
     </div>
 </div>
 
+<!-- Load config FIRST, then the app logic -->
+<script src="config.js"></script>
 <script>
     // ============================================================
-    // 1. DOM REFERENCES
+    // DOM REFERENCES
     // ============================================================
-    const uploadArea = document.getElementById('uploadArea');
-    const loadingDiv = document.getElementById('loading');
-    const resultDiv = document.getElementById('result');
-    const outputPre = document.getElementById('output');
-    
-    // ============================================================
-    // 2. API URL CONFIGURATION
-    // ============================================================
-    // Local testing (Live Server) - uncomment for local testing
-    //const API_URL = 'http://127.0.0.1:7071/api/UploadInvoice';
+    const uploadArea  = document.getElementById('uploadArea');
+    const loadingDiv  = document.getElementById('loading');
+    const loadingText = document.getElementById('loadingText');
+    const resultDiv   = document.getElementById('result');
 
-    // Production (Azure Static Web Apps)
-    const API_URL = 'https://chinatradeapp-g0hxhgcvh3ebf8et.australiasoutheast-01.azurewebsites.net/api/UploadInvoice';
-    
     // ============================================================
-    // 3. CLICK UPLOAD HANDLER
+    // PULL CONFIG FROM config.js
+    // ============================================================
+    const { API, POLLING, UPLOAD } = window.APP_CONFIG;
+
+    // ============================================================
+    // UPLOAD: CLICK HANDLER
     // ============================================================
     uploadArea.addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = 'image/jpeg,image/png,application/pdf';
+        input.accept = UPLOAD.ACCEPTED_TYPES;
         input.onchange = (e) => uploadFile(e.target.files[0]);
         input.click();
     });
-    
+
     // ============================================================
-    // 4. DRAG AND DROP HANDLERS
+    // UPLOAD: DRAG AND DROP HANDLERS
     // ============================================================
     uploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
         uploadArea.classList.add('dragover');
     });
-    
+
     uploadArea.addEventListener('dragleave', () => {
         uploadArea.classList.remove('dragover');
     });
-    
+
     uploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
         const file = e.dataTransfer.files[0];
         if (file) uploadFile(file);
     });
-    
+
     // ============================================================
-    // 5. MAIN UPLOAD FUNCTION (UPDATED)
+    // MAIN UPLOAD FUNCTION
     // ============================================================
     async function uploadFile(file) {
-        // Show loading spinner, hide previous results
+        // Client-side file size guard
+        if (file.size > UPLOAD.MAX_FILE_SIZE_MB * 1024 * 1024) {
+            showError(`File is too large. Max ${UPLOAD.MAX_FILE_SIZE_MB} MB.`);
+            return;
+        }
+
         loadingDiv.style.display = 'block';
+        loadingText.textContent = 'Uploading invoice...';
         resultDiv.style.display = 'none';
 
         const reader = new FileReader();
         reader.onload = async () => {
-            // Extract Base64 content (remove the data:image/...;base64, prefix)
             const base64 = reader.result.split(',')[1];
             const payload = {
                 fileName: file.name,
@@ -181,48 +243,107 @@
             };
 
             try {
-                // Send the file to the Azure Function
-                const response = await fetch(API_URL, {
+                const response = await fetch(API.UPLOAD, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                // --- UPDATED: Better JSON handling ---
-                // Check if the response is JSON
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    // Parse and display the JSON response
-                    const data = await response.json();
-                    outputPre.textContent = JSON.stringify(data, null, 2);
-                } else {
-                    // If not JSON, show the raw text (helps with debugging)
-                    const text = await response.text();
-                    outputPre.textContent = `⚠️ Response is not JSON:\n${text}`;
-                }
-                resultDiv.style.display = 'block';
+                const uploadResult = await response.json();
 
+                if (uploadResult.success && uploadResult.blobName) {
+                    loadingText.textContent = 'Running AI Vision OCR...';
+                    pollForResults(uploadResult.blobName);
+                } else {
+                    showError('Upload succeeded but no blobName was returned.');
+                }
             } catch (error) {
-                // Display any fetch or parsing errors
-                outputPre.textContent = `❌ Error: ${error.message}\n\nMake sure your Azure Function is deployed and CORS is enabled.`;
-                resultDiv.style.display = 'block';
-            } finally {
-                // Hide the loading spinner regardless of success or failure
-                loadingDiv.style.display = 'none';
+                showError(error.message);
             }
         };
-        // Start reading the file as a Data URL (Base64)
         reader.readAsDataURL(file);
     }
-    
+
     // ============================================================
-    // 6. RESET FORM FUNCTION
+    // POLL FOR OCR RESULTS
     // ============================================================
+    async function pollForResults(blobName) {
+        for (let i = 0; i < POLLING.MAX_ATTEMPTS; i++) {
+            try {
+                const response = await fetch(
+                    `${API.GET_DATA}?fileName=${encodeURIComponent(blobName)}`
+                );
+
+                if (response.status === 200) {
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        displayResults(data.data);
+                        return;
+                    }
+                }
+            } catch (error) {
+                // Network hiccup — retry
+            }
+
+            await new Promise(resolve => setTimeout(resolve, POLLING.DELAY_MS));
+        }
+
+        showError(
+            `Processing is taking longer than expected ` +
+            `(${POLLING.TIMEOUT_MS / 1000} seconds). Check Cosmos DB directly.`
+        );
+    }
+
+    // ============================================================
+    // DISPLAY RESULTS
+    // ============================================================
+    function displayResults(doc) {
+        setField('invoiceNumber', doc.invoiceNumber);
+        setField('amount', doc.amount);
+        setField('fileName', doc.fileName);
+        setField('processedAt', doc.processedAt
+            ? new Date(doc.processedAt).toLocaleString()
+            : null);
+
+        document.getElementById('rawText').textContent =
+            doc.extractedText || 'No text extracted';
+
+        loadingDiv.style.display = 'none';
+        resultDiv.style.display = 'block';
+    }
+
+    function setField(id, value) {
+        const el = document.getElementById(id);
+        const isEmpty = !value || value === 'Not found';
+        el.textContent = isEmpty ? '—' : value;
+        el.classList.toggle('empty', isEmpty);
+    }
+
+    // ============================================================
+    // ERROR DISPLAY
+    // ============================================================
+    function showError(message) {
+        setField('invoiceNumber', null);
+        setField('amount', null);
+        setField('fileName', null);
+        setField('processedAt', null);
+        document.getElementById('rawText').textContent = `Error: ${message}`;
+        loadingDiv.style.display = 'none';
+        resultDiv.style.display = 'block';
+    }
+
+    // ============================================================
+    // UTILITY FUNCTIONS
+    // ============================================================
+    function toggleRawText() {
+        const rawText = document.getElementById('rawText');
+        const isHidden = rawText.style.display === 'none';
+        rawText.style.display = isHidden ? 'block' : 'none';
+    }
+
     function resetForm() {
         resultDiv.style.display = 'none';
-        outputPre.textContent = 'Waiting for results...';
+        loadingDiv.style.display = 'none';
     }
 </script>
 </body>
