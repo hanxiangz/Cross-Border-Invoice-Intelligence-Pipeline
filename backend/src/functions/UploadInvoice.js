@@ -76,22 +76,6 @@ app.http('UploadInvoice', {
         const blobName = `${Date.now()}-${fileName}`;
         const contentType = body.contentType || 'application/octet-stream';
 
-        // 🔧 TEMPORARY TEST MODE: Uncomment this block to test without uploading to Blob Storage
-        /*
-        context.log('TEST MODE: Returning payload without uploading');
-        return {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-            body: {
-                success: true,
-                testMode: true,
-                receivedFileName: fileName,
-                contentType: contentType,
-                base64Length: body.content.length,
-                base64Preview: body.content.substring(0, 50)
-            }
-        };
-        */
 
         try {
             context.log(`Attempting to upload to Blob Storage...`);

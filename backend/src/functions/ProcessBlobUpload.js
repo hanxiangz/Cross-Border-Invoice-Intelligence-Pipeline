@@ -1,65 +1,110 @@
-const { app } = require('@azure/functions');
-const { ComputerVisionClient } = require('@azure/cognitiveservices-computervision');
-const { ApiKeyCredentials } = require('@azure/ms-rest-js');
-const { Readable } = require('stream');
+const { app, output } = require('@azure/functions');
+const createClient = require('@azure-rest/ai-vision-image-analysis').default;
+const { AzureKeyCredential } = require('@azure/core-auth');
 
 // Get credentials from environment variables
 const key = process.env.AI_VISION_KEY;
 const endpoint = process.env.AI_VISION_ENDPOINT;
 
+// Define Cosmos DB output binding
+const cosmosOutput = output.cosmosDB({
+    databaseName: 'chinatrade-cosmos',
+    containerName: 'ProcessingResults',
+    connection: 'COSMOS_DB_CONNECTION',
+    createIfNotExists: true
+});
+
 app.storageBlob('ProcessBlobUpload', {
     path: 'uploads/{name}',
     connection: 'AzureWebJobsStorage',
+    extraOutputs: [cosmosOutput],
     handler: async (blob, context) => {
         const fileName = context.triggerMetadata.name;
         context.log(`Processing: ${fileName}`);
         context.log(`File size: ${blob.length} bytes`);
-        
+
         if (!key || !endpoint) {
-            context.log('ERROR: AI Vision credentials not set in environment variables');
+            context.log('ERROR: AI Vision credentials not set');
+            const errorDoc = {
+                id: fileName,
+                fileName: fileName,
+                status: 'error',
+                error: 'AI Vision credentials not set',
+                processedAt: new Date().toISOString()
+            };
+            context.extraOutputs.set(cosmosOutput, errorDoc);
             return;
         }
-        
+
         try {
-            // Create AI Vision client
-            const credentials = new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': key } });
-            const client = new ComputerVisionClient(credentials, endpoint);
-            
-            // ✅ FIX: Convert Buffer to Readable Stream
-            const stream = Readable.from(blob);
-            
-            // Call OCR on the image using the stream
+            // Create the Image Analysis client
+            const credential = new AzureKeyCredential(key);
+            const client = createClient(endpoint, credential);
+
             context.log('Calling Azure AI Vision OCR...');
-            const result = await client.recognizePrintedTextInStream(true, stream);
             
-            // Extract all text from the result
+            // Analyze the image Buffer directly
+            const result = await client.path('/imageanalysis:analyze').post({
+                body: blob,  // Pass the Buffer directly
+                queryParameters: {
+                    features: ['Read']  // OCR feature
+                },
+                contentType: 'application/octet-stream'
+            });
+
+            const iaResult = result.body;
+            
+            // Extract text from the result
             let extractedText = '';
-            if (result.regions) {
-                for (const region of result.regions) {
-                    for (const line of region.lines) {
-                        for (const word of line.words) {
-                            extractedText += word.text + ' ';
-                        }
-                        extractedText += '\n';
+            if (iaResult.readResult && iaResult.readResult.blocks) {
+                for (const block of iaResult.readResult.blocks) {
+                    for (const line of block.lines) {
+                        extractedText += line.text + '\n';
                     }
                 }
             }
-            
+
             context.log(`OCR Result:\n${extractedText}`);
             context.log(`Total characters extracted: ${extractedText.length}`);
-            
+
             // Try to find invoice number (simple pattern)
             const invoiceMatch = extractedText.match(/INV-\d{3}-\d{3}/i) || extractedText.match(/发票号码[:：]\s*(\S+)/);
             const amountMatch = extractedText.match(/¥?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/);
-            
-            context.log(`Potential invoice number: ${invoiceMatch ? invoiceMatch[0] : 'Not found'}`);
-            context.log(`Potential amount: ${amountMatch ? amountMatch[1] : 'Not found'}`);
-            
+
+            const invoiceNumber = invoiceMatch ? invoiceMatch[0] : 'Not found';
+            const amount = amountMatch ? amountMatch[1] : 'Not found';
+
+            context.log(`Potential invoice number: ${invoiceNumber}`);
+            context.log(`Potential amount: ${amount}`);
+
+            // Save to Cosmos DB
+            const doc = {
+                id: fileName,
+                fileName: fileName,
+                extractedText: extractedText,
+                invoiceNumber: invoiceNumber,
+                amount: amount,
+                processedAt: new Date().toISOString(),
+                status: 'completed'
+            };
+
+            context.extraOutputs.set(cosmosOutput, doc);
+            context.log(`✅ Saved to Cosmos DB: ${fileName}`);
+
         } catch (error) {
             context.log(`ERROR processing image: ${error.message}`);
             context.log(`Error stack: ${error.stack}`);
+
+            const errorDoc = {
+                id: fileName,
+                fileName: fileName,
+                status: 'error',
+                error: error.message,
+                processedAt: new Date().toISOString()
+            };
+            context.extraOutputs.set(cosmosOutput, errorDoc);
         }
-        
+
         context.log(`Finished processing: ${fileName}`);
     }
 });
