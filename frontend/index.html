@@ -183,11 +183,12 @@
     const loadingDiv  = document.getElementById('loading');
     const loadingText = document.getElementById('loadingText');
     const resultDiv   = document.getElementById('result');
+    const rawTextEl   = document.getElementById('rawText');
 
     // ============================================================
     // PULL CONFIG FROM config.js
     // ============================================================
-    const { API, POLLING, UPLOAD } = window.APP_CONFIG;
+    const { API, POLLING, UPLOAD, DISPLAY, MS_PER_SECOND } = window.APP_CONFIG;
 
     // ============================================================
     // UPLOAD: CLICK HANDLER
@@ -223,15 +224,22 @@
     // MAIN UPLOAD FUNCTION
     // ============================================================
     async function uploadFile(file) {
-        // Client-side file size guard
-        if (file.size > UPLOAD.MAX_FILE_SIZE_MB * 1024 * 1024) {
+        // Reject empty files
+        if (file.size < UPLOAD.MIN_FILE_SIZE_BYTES) {
+            showError('The file is empty. Please select a valid image.');
+            return;
+        }
+
+        // Reject files larger than the maximum
+        const maxSizeBytes = UPLOAD.MAX_FILE_SIZE_MB * UPLOAD.BYTES_PER_MB;
+        if (file.size > maxSizeBytes) {
             showError(`File is too large. Max ${UPLOAD.MAX_FILE_SIZE_MB} MB.`);
             return;
         }
 
-        loadingDiv.style.display = 'block';
+        loadingDiv.style.display = DISPLAY.BLOCK;
         loadingText.textContent = 'Uploading invoice...';
-        resultDiv.style.display = 'none';
+        resultDiv.style.display = DISPLAY.NONE;
 
         const reader = new FileReader();
         reader.onload = async () => {
@@ -268,6 +276,8 @@
     // POLL FOR OCR RESULTS
     // ============================================================
     async function pollForResults(blobName) {
+        const isLastAttempt = (attempt) => attempt === POLLING.MAX_ATTEMPTS - 1;
+
         for (let i = 0; i < POLLING.MAX_ATTEMPTS; i++) {
             try {
                 const response = await fetch(
@@ -285,12 +295,31 @@
                 // Network hiccup — retry
             }
 
+            // On the final attempt, check if the document exists with an error status
+            if (isLastAttempt(i)) {
+                try {
+                    const response = await fetch(
+                        `${API.GET_DATA}?fileName=${encodeURIComponent(blobName)}`
+                    );
+                    if (response.status === 200) {
+                        const data = await response.json();
+                        if (data.data && data.data.status === 'error') {
+                            showError(`Processing failed: ${data.data.error}`);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    // Ignore — fall through to the timeout error
+                }
+            }
+
             await new Promise(resolve => setTimeout(resolve, POLLING.DELAY_MS));
         }
 
+        const timeoutSeconds = POLLING.TIMEOUT_MS / MS_PER_SECOND;
         showError(
             `Processing is taking longer than expected ` +
-            `(${POLLING.TIMEOUT_MS / 1000} seconds). Check Cosmos DB directly.`
+            `(${timeoutSeconds} seconds). Check Cosmos DB directly.`
         );
     }
 
@@ -305,11 +334,10 @@
             ? new Date(doc.processedAt).toLocaleString()
             : null);
 
-        document.getElementById('rawText').textContent =
-            doc.extractedText || 'No text extracted';
+        rawTextEl.textContent = doc.extractedText || 'No text extracted';
 
-        loadingDiv.style.display = 'none';
-        resultDiv.style.display = 'block';
+        loadingDiv.style.display = DISPLAY.NONE;
+        resultDiv.style.display = DISPLAY.BLOCK;
     }
 
     function setField(id, value) {
@@ -327,23 +355,22 @@
         setField('amount', null);
         setField('fileName', null);
         setField('processedAt', null);
-        document.getElementById('rawText').textContent = `Error: ${message}`;
-        loadingDiv.style.display = 'none';
-        resultDiv.style.display = 'block';
+        rawTextEl.textContent = `Error: ${message}`;
+        loadingDiv.style.display = DISPLAY.NONE;
+        resultDiv.style.display = DISPLAY.BLOCK;
     }
 
     // ============================================================
     // UTILITY FUNCTIONS
     // ============================================================
     function toggleRawText() {
-        const rawText = document.getElementById('rawText');
-        const isHidden = rawText.style.display === 'none';
-        rawText.style.display = isHidden ? 'block' : 'none';
+        const isHidden = rawTextEl.style.display === DISPLAY.NONE;
+        rawTextEl.style.display = isHidden ? DISPLAY.BLOCK : DISPLAY.NONE;
     }
 
     function resetForm() {
-        resultDiv.style.display = 'none';
-        loadingDiv.style.display = 'none';
+        resultDiv.style.display = DISPLAY.NONE;
+        loadingDiv.style.display = DISPLAY.NONE;
     }
 </script>
 </body>

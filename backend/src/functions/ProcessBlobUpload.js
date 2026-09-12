@@ -64,6 +64,20 @@ app.storageBlob('ProcessBlobUpload', {
                 }
             }
 
+            // Handle errors extracting text from image
+            if (!extractedText || extractedText.trim().length === 0) {
+                context.log('WARNING: No text extracted from image');
+                const warningDoc = {
+                    id: fileName,
+                    fileName: fileName,
+                    status: 'warning',
+                    message: 'No text could be extracted from this image. It may not be an invoice.',
+                    processedAt: new Date().toISOString()
+                };
+                context.extraOutputs.set(cosmosOutput, warningDoc);
+                return;
+            }
+
             context.log(`OCR Result:\n${extractedText}`);
             context.log(`Total characters extracted: ${extractedText.length}`);
 

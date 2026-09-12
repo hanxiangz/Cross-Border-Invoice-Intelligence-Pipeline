@@ -50,6 +50,19 @@ app.http('GetInvoiceData', {
             }
         } catch (error) {
             context.log(`ERROR: ${error.message}`);
+    
+            // Check for specific error types
+            if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+                return {
+                    status: 503,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        success: false,
+                        error: 'Database temporarily unavailable. Please try again.' 
+                    })
+                };
+            }
+            
             return {
                 status: 500,
                 headers: { 'Content-Type': 'application/json' },

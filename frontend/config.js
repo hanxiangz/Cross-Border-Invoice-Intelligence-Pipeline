@@ -5,11 +5,27 @@
 // changed in one place without hunting through the codebase.
 // ============================================================
 
+// ------------------------------------------------------------
+// Unit conversion constants
+// ------------------------------------------------------------
+// Storage sizes are in binary units: 1 KB = 1024 bytes,
+// 1 MB = 1024 KB = 1,048,576 bytes.
+const BYTES_PER_KB = 1024;
+const BYTES_PER_MB = BYTES_PER_KB * 1024;
+
+// Time conversions
+const MS_PER_SECOND = 1000;
+
+// CSS display values (used to show/hide elements)
+const DISPLAY = {
+    NONE: 'none',
+    BLOCK: 'block'
+};
+
 window.APP_CONFIG = {
     // ----------------------------------------------------------
     // API Endpoints
     // ----------------------------------------------------------
-    // Production (Azure Static Web Apps + Azure Functions)
     API: {
         UPLOAD: 'https://chinatradeapp-g0hxhgcvh3ebf8et.australiasoutheast-01.azurewebsites.net/api/UploadInvoice',
         GET_DATA: 'https://chinatradeapp-g0hxhgcvh3ebf8et.australiasoutheast-01.azurewebsites.net/api/GetInvoiceData'
@@ -20,12 +36,10 @@ window.APP_CONFIG = {
     // ----------------------------------------------------------
     // The OCR processing typically takes 3-8 seconds. We poll
     // every 2 seconds for up to 30 seconds before giving up.
-    // This balances responsiveness (user sees results quickly)
-    // with server load (we don't hammer the API).
     POLLING: {
-        MAX_ATTEMPTS: 15,   // 15 attempts
-        DELAY_MS: 2000,     // 2 seconds between attempts
-        TIMEOUT_MS: 30000   // 30 seconds total (15 × 2s)
+        MAX_ATTEMPTS: 15,
+        DELAY_MS: 2000,
+        TIMEOUT_MS: 30000
     },
 
     // ----------------------------------------------------------
@@ -33,8 +47,16 @@ window.APP_CONFIG = {
     // ----------------------------------------------------------
     UPLOAD: {
         ACCEPTED_TYPES: 'image/jpeg,image/png,application/pdf',
-        MAX_FILE_SIZE_MB: 10
-    }
+        MAX_FILE_SIZE_MB: 10,
+        MIN_FILE_SIZE_BYTES: 1,       // Reject empty files
+        BYTES_PER_MB: BYTES_PER_MB    // Conversion constant
+    },
+
+    // ----------------------------------------------------------
+    // Display and Formatting
+    // ----------------------------------------------------------
+    DISPLAY: DISPLAY,
+    MS_PER_SECOND: MS_PER_SECOND
 };
 
 // ============================================================
