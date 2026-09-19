@@ -16,11 +16,6 @@ const BYTES_PER_MB = BYTES_PER_KB * 1024;
 // Time conversions
 const MS_PER_SECOND = 1000;
 
-// CSS display values (used to show/hide elements)
-const DISPLAY = {
-    NONE: 'none',
-    BLOCK: 'block'
-};
 
 window.APP_CONFIG = {
     // ----------------------------------------------------------
@@ -51,12 +46,6 @@ window.APP_CONFIG = {
         MIN_FILE_SIZE_BYTES: 1,       // Reject empty files
         BYTES_PER_MB: BYTES_PER_MB    // Conversion constant
     },
-
-    // ----------------------------------------------------------
-    // Display and Formatting
-    // ----------------------------------------------------------
-    DISPLAY: DISPLAY,
-    MS_PER_SECOND: MS_PER_SECOND
 };
 
 // ============================================================
@@ -65,5 +54,5 @@ window.APP_CONFIG = {
 // Uncomment the lines below to test against your local
 // Azure Functions (running via `func start`).
 //
-// window.APP_CONFIG.API.UPLOAD    = 'http://127.0.0.1:7071/api/UploadInvoice';
-// window.APP_CONFIG.API.GET_DATA  = 'http://127.0.0.1:7071/api/GetInvoiceData';
+window.APP_CONFIG.API.UPLOAD    = 'http://127.0.0.1:7071/api/UploadInvoice';
+window.APP_CONFIG.API.GET_DATA  = 'http://127.0.0.1:7071/api/GetInvoiceData';

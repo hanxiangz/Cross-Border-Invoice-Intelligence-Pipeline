@@ -186,9 +186,14 @@
     const rawTextEl   = document.getElementById('rawText');
 
     // ============================================================
-    // PULL CONFIG FROM config.js
+    // UI CONSTANTS
     // ============================================================
-    const { API, POLLING, UPLOAD, DISPLAY, MS_PER_SECOND } = window.APP_CONFIG;
+    const DISPLAY = {
+        NONE: 'none',
+        BLOCK: 'block'
+    };
+
+    const { API, POLLING, UPLOAD } = window.APP_CONFIG;
 
     // ============================================================
     // UPLOAD: CLICK HANDLER
