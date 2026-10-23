@@ -16,7 +16,6 @@ const BYTES_PER_MB = BYTES_PER_KB * 1024;
 // Time conversions
 const MS_PER_SECOND = 1000;
 
-
 window.APP_CONFIG = {
     // ----------------------------------------------------------
     // API Endpoints
@@ -46,6 +45,11 @@ window.APP_CONFIG = {
         MIN_FILE_SIZE_BYTES: 1,       // Reject empty files
         BYTES_PER_MB: BYTES_PER_MB    // Conversion constant
     },
+
+    // ----------------------------------------------------------
+    // Time conversions (used by the frontend for formatting)
+    // ----------------------------------------------------------
+    MS_PER_SECOND: MS_PER_SECOND
 };
 
 // ============================================================

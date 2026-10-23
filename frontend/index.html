@@ -157,12 +157,12 @@
                 <div class="field-value empty" id="amount">—</div>
             </div>
             <div class="field">
-                <div class="field-label">File Name</div>
-                <div class="field-value empty" id="fileName">—</div>
+                <div class="field-label">Supplier</div>
+                <div class="field-value empty" id="supplier">—</div>
             </div>
             <div class="field">
-                <div class="field-label">Processed At</div>
-                <div class="field-value empty" id="processedAt">—</div>
+                <div class="field-label">Invoice Date</div>
+                <div class="field-value empty" id="date">—</div>
             </div>
         </div>
 
@@ -321,7 +321,7 @@
             await new Promise(resolve => setTimeout(resolve, POLLING.DELAY_MS));
         }
 
-        const timeoutSeconds = POLLING.TIMEOUT_MS / MS_PER_SECOND;
+        const timeoutSeconds = POLLING.TIMEOUT_MS / window.APP_CONFIG.MS_PER_SECOND;
         showError(
             `Processing is taking longer than expected ` +
             `(${timeoutSeconds} seconds). Check Cosmos DB directly.`
@@ -334,10 +334,8 @@
     function displayResults(doc) {
         setField('invoiceNumber', doc.invoiceNumber);
         setField('amount', doc.amount);
-        setField('fileName', doc.fileName);
-        setField('processedAt', doc.processedAt
-            ? new Date(doc.processedAt).toLocaleString()
-            : null);
+        setField('supplier', doc.supplier);
+        setField('date', doc.date);
 
         rawTextEl.textContent = doc.extractedText || 'No text extracted';
 
@@ -358,8 +356,8 @@
     function showError(message) {
         setField('invoiceNumber', null);
         setField('amount', null);
-        setField('fileName', null);
-        setField('processedAt', null);
+        setField('supplier', null);
+        setField('date', null);
         rawTextEl.textContent = `Error: ${message}`;
         loadingDiv.style.display = DISPLAY.NONE;
         resultDiv.style.display = DISPLAY.BLOCK;

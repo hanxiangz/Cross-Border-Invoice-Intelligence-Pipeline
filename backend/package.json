@@ -4,7 +4,9 @@
   "description": "",
   "scripts": {
     "start": "func start",
-    "test": "echo \"No tests yet...\""
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@azure-rest/ai-vision-image-analysis": "^1.0.0-beta.3",
@@ -13,5 +15,8 @@
     "@azure/functions": "^4.0.0",
     "@azure/ms-rest-js": "^2.7.0"
   },
-  "main": "src/{index.js,functions/*.js}"
+  "main": "src/{index.js,functions/*.js}",
+  "devDependencies": {
+    "jest": "^30.5.2"
+  }
 }

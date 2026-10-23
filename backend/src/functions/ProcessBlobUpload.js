@@ -1,6 +1,7 @@
 const { app, output } = require('@azure/functions');
 const createClient = require('@azure-rest/ai-vision-image-analysis').default;
 const { AzureKeyCredential } = require('@azure/core-auth');
+const { extractInvoiceData } = require('../utils/extractInvoiceData');
 
 // Get credentials from environment variables
 const key = process.env.AI_VISION_KEY;
@@ -42,7 +43,7 @@ app.storageBlob('ProcessBlobUpload', {
             const client = createClient(endpoint, credential);
 
             context.log('Calling Azure AI Vision OCR...');
-            
+
             // Analyze the image Buffer directly
             const result = await client.path('/imageanalysis:analyze').post({
                 body: blob,  // Pass the Buffer directly
@@ -53,7 +54,7 @@ app.storageBlob('ProcessBlobUpload', {
             });
 
             const iaResult = result.body;
-            
+
             // Extract text from the result
             let extractedText = '';
             if (iaResult.readResult && iaResult.readResult.blocks) {
@@ -64,7 +65,7 @@ app.storageBlob('ProcessBlobUpload', {
                 }
             }
 
-            // Handle errors extracting text from image
+            // Handle case where no text was extracted
             if (!extractedText || extractedText.trim().length === 0) {
                 context.log('WARNING: No text extracted from image');
                 const warningDoc = {
@@ -81,15 +82,14 @@ app.storageBlob('ProcessBlobUpload', {
             context.log(`OCR Result:\n${extractedText}`);
             context.log(`Total characters extracted: ${extractedText.length}`);
 
-            // Try to find invoice number (simple pattern)
-            const invoiceMatch = extractedText.match(/INV-\d{3}-\d{3}/i) || extractedText.match(/发票号码[:：]\s*(\S+)/);
-            const amountMatch = extractedText.match(/¥?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/);
+            // Extract structured fields from the OCR text
+            const extracted = extractInvoiceData(extractedText);
+            const { invoiceNumber, amount, date, supplier } = extracted;
 
-            const invoiceNumber = invoiceMatch ? invoiceMatch[0] : 'Not found';
-            const amount = amountMatch ? amountMatch[1] : 'Not found';
-
-            context.log(`Potential invoice number: ${invoiceNumber}`);
-            context.log(`Potential amount: ${amount}`);
+            context.log(`Invoice Number: ${invoiceNumber}`);
+            context.log(`Amount: ${amount}`);
+            context.log(`Date: ${date}`);
+            context.log(`Supplier: ${supplier}`);
 
             // Save to Cosmos DB
             const doc = {
@@ -98,6 +98,8 @@ app.storageBlob('ProcessBlobUpload', {
                 extractedText: extractedText,
                 invoiceNumber: invoiceNumber,
                 amount: amount,
+                date: date,           // ← NEW
+                supplier: supplier,   // ← NEW
                 processedAt: new Date().toISOString(),
                 status: 'completed'
             };
