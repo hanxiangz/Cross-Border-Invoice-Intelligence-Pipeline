@@ -27,7 +27,7 @@ A serverless document intelligence pipeline that automates the entire extraction
 
 ## 🏗️ Architecture
 
-
+![Architecture](screenshots/architecture.png)
 
 
 ## 🛠️ Technologies Used
