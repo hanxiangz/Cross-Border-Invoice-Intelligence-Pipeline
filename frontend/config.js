@@ -58,5 +58,5 @@ window.APP_CONFIG = {
 // Uncomment the lines below to test against your local
 // Azure Functions (running via `func start`).
 //
-window.APP_CONFIG.API.UPLOAD    = 'http://127.0.0.1:7071/api/UploadInvoice';
-window.APP_CONFIG.API.GET_DATA  = 'http://127.0.0.1:7071/api/GetInvoiceData';
+// window.APP_CONFIG.API.UPLOAD    = 'http://127.0.0.1:7071/api/UploadInvoice';
+// window.APP_CONFIG.API.GET_DATA  = 'http://127.0.0.1:7071/api/GetInvoiceData';
