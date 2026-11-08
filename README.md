@@ -29,6 +29,15 @@ A serverless document intelligence pipeline that automates the entire extraction
 
 ![Architecture](screenshots/architecture.png)
 
+## 📸 Screenshots
+
+| Frontend | Cosmos DB |
+| :---: | :---: |
+| ![Frontend](screenshots/Cosmos DB document.png) | ![Cosmos DB](screenshots/Functions.png) |
+
+| Unit Tests | Azure Portal |
+| :---: | :---: |
+| ![Tests](screenshots/Unit tests.png) | ![Azure](screenshots/Upload invoice.png) |
 
 ## 🛠️ Technologies Used
 
